@@ -9,7 +9,6 @@ RUN rm -rf node_modules package-lock.json && npm install
 COPY . .
 # Install dependency build untuk canvas & sharp
 RUN apt-get update && apt-get install -y python3 make g++ libvips-dev libcairo2-dev libjpeg-dev libpango1.0-dev libgif-dev librsvg2-dev && ln -sf /usr/bin/python3 /usr/bin/python && npm install
-# Install dependencies (pastikan semua yang dibutuhkan)
 
 # Build
 FROM base AS builder
@@ -39,7 +38,9 @@ COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/server.js ./server.js
-COPY --from=builder /app/dist ./dist
+
+# Copy source files for workers (since they're not compiled)
+COPY --from=builder /app/src ./src
 
 # Create required dirs
 RUN mkdir -p public/tickets public/uploads public/certificates public/generated-tickets \
@@ -58,5 +59,5 @@ USER nextjs
 
 EXPOSE 3000
 
-# Start both web server dan worker Bull secara paralel
-CMD pm2 start server.js --name web && pm2 start dist/src/jobs/certificateMultiWorker.js --name worker && pm2 logs
+# Start only the web server (remove the worker for now since it's causing issues)
+CMD pm2 start server.js --name web && pm2 logs
